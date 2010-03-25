@@ -152,7 +152,7 @@ public class SeriousIRCBot extends PircBot {
 
 	/** Handles the Version command. */
 	private void handleVersion(final String channel, final String sender) {
-		sendMessage(channel, sender + ", " + MESSAGE_VERSION + " [" + BOT_VERSION + "].");
+		sendNotice(sender, sender + ", " + MESSAGE_VERSION + " [" + BOT_VERSION + "].");
 	}
 
 	/** Handles the Help command. */
@@ -190,21 +190,21 @@ public class SeriousIRCBot extends PircBot {
 		String command = params[0];
 		if (command.equals(QUERY_GREET_SET)) {
 			if (params.length == 1) {
-				sendMessage(channel, sender + ", " + MESSAGE_COMMAND_PARAMETERS_NUMBER + " [2] " + MESSAGE_PARAMETERS);
+				sendNotice(sender, sender + ", " + MESSAGE_COMMAND_PARAMETERS_NUMBER + " [2] " + MESSAGE_PARAMETERS);
 			} else {
 				userGreets.set(sender, params[1]);
 				userGreets.save(directory);
-				sendMessage(channel, sender + ", " + MESSAGE_GREET_SET + ".");
+				sendNotice(sender, sender + ", " + MESSAGE_GREET_SET + ".");
 			}
 		} else if (command.equals(QUERY_GREET_GET)) {
 			if (params.length == 1) {
-				sendMessage(channel, sender + ", " + MESSAGE_COMMAND_PARAMETERS_NUMBER + " [2] " + MESSAGE_PARAMETERS);
+				sendNotice(sender, sender + ", " + MESSAGE_COMMAND_PARAMETERS_NUMBER + " [2] " + MESSAGE_PARAMETERS);
 			} else {
 				String greet = userGreets.get(params[1]);
 				if (greet == null) {
-					sendMessage(channel, sender + ", [" + params[1] + "] " + MESSAGE_GREET_NOT_SET + ".");
+					sendNotice(sender, sender + ", [" + params[1] + "] " + MESSAGE_GREET_NOT_SET + ".");
 				} else {
-					sendMessage(channel, sender + ", " + MESSAGE_GREET_GET + " [" + params[1] + "] " + MESSAGE_GREET_IS + " [" +
+					sendNotice(sender, sender + ", " + MESSAGE_GREET_GET + " [" + params[1] + "] " + MESSAGE_GREET_IS + " [" +
 							userGreets.get(params[1]) + "].");
 				}
 			}
@@ -350,7 +350,7 @@ public class SeriousIRCBot extends PircBot {
 	protected void onNickChange(final String oldNick, final String login, final String hostname, final String newNick) {
 		String oldNickLC = oldNick.toLowerCase();
 		String newNickLC = newNick.toLowerCase();
-		if ((oldNickLC.contains("afk") && !newNickLC.contains("afk")) || (oldNickLC.contains("bnc") && !newNickLC.contains("bnc"))) {
+		if ((oldNickLC.endsWith("afk") && !newNickLC.endsWith("afk")) || (oldNickLC.endsWith("bnc") && !newNickLC.endsWith("bnc"))) {
 			onJoin("#fer2", newNick, login, hostname);
 		}
 	}
