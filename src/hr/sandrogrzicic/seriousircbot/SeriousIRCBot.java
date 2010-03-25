@@ -1,3 +1,4 @@
+package hr.sandrogrzicic.seriousircbot;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -94,7 +95,9 @@ public class SeriousIRCBot extends PircBot {
 		} else if (command.equals(QUERY_QUOTE)) {
 			handleQuote(channel, sender, parameters);
 		} else {
-			sendNotice(sender, sender + ", " + MESSAGE_INVALID_COMMAND);
+			if (command.length() > 0) {
+				sendNotice(sender, sender + ", " + MESSAGE_INVALID_COMMAND);
+			}
 		}
 	}
 

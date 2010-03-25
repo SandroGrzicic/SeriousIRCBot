@@ -1,3 +1,4 @@
+package hr.sandrogrzicic.seriousircbot;
 
 /**
  * Serious IRC Bot entrypoint.

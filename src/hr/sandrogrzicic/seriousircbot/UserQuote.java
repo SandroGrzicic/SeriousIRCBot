@@ -1,3 +1,4 @@
+package hr.sandrogrzicic.seriousircbot;
 
 /**
  * Represents a single user quote.

@@ -1,3 +1,4 @@
+package hr.sandrogrzicic.seriousircbot;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -8,36 +9,34 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Random;
-
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 /**
- * Handles user quotes.
+ * Handles user greets.
  * 
  * @author SeriousWorm
  */
-public class UserQuotes {
-	private static final String QUOTES_FILENAME = "quotes.txt";
-	private static final Random randomNumberGenerator = new Random();
-	private final ArrayList<UserQuote> quotes;
+public class UserGreets {
+	private static final String GREETS_FILENAME = "greets.txt";
+	private final HashMap<String, String> greets;
 
 	/**
-	 * Creates a new empty list with user quotes.
+	 * Creates a new empty map with user greets.
 	 */
-	public UserQuotes() {
-		quotes = new ArrayList<UserQuote>();
+	public UserGreets() {
+		greets = new HashMap<String, String>();
 	}
 
 	/**
-	 * Loads the user quotes from the specified directory.
+	 * Loads the user greets from the specified directory.
 	 * 
 	 * @param directory
 	 */
 	public void load(final String directory) {
-		final String filename = directory + File.separator + QUOTES_FILENAME;
+		final String filename = directory + File.separator + GREETS_FILENAME;
 		BufferedReader reader = null;
-
+		
 		try {
 			new File(filename).createNewFile();
 		} catch (IOException e) {
@@ -55,8 +54,8 @@ public class UserQuotes {
 		try {
 			String inputLine;
 			while ((inputLine = reader.readLine()) != null) {
-				String[] quote = inputLine.split("\t", 3);
-				quotes.add(new UserQuote(Integer.parseInt(quote[0]), quote[1], quote[2]));
+				String[] greet = inputLine.split("\t", 2);
+				greets.put(greet[0], greet[1]);
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -64,13 +63,13 @@ public class UserQuotes {
 	}
 
 	/**
-	 * Saves the user quotes to the specified directory.
+	 * Saves the user greets to the specified directory.
 	 * 
 	 * @param directory
 	 * @return whether the save has been successful.
 	 */
 	public boolean save(final String directory) {
-		final String filename = directory + File.separator + QUOTES_FILENAME;
+		final String filename = directory + File.separator + GREETS_FILENAME;
 		BufferedWriter writer = null;
 		try {
 			writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(filename), "UTF-8"));
@@ -81,8 +80,8 @@ public class UserQuotes {
 		}
 
 		try {
-			for (final UserQuote quote : quotes) {
-				writer.write(quote.getID() + "\t" + quote.getUser() + "\t" + quote.get());
+			for (final Entry<String, String> greet : greets.entrySet()) {
+				writer.write(greet.getKey() + "\t" + greet.getValue());
 				writer.newLine();
 			}
 			writer.close();
@@ -93,38 +92,27 @@ public class UserQuotes {
 	}
 
 	/**
-	 * Adds a new quote. Returns the updated number of quotes.
+	 * Associates the new greet message with the specified user.
 	 */
-	public int add(final String user, final String quote) {
-		quotes.add(new UserQuote(quotes.size(), user, quote));
-		return quotes.size();
+	public void set(final String user, final String greet) {
+		greets.put(user.toLowerCase(), greet);
 	}
 
 	/**
-	 * Removes the specified quote.
+	 * Returns the greet message associated with the specified user.
+	 * 
+	 * @param nickname
+	 * @return the greet message.
 	 */
-	public boolean remove(final int ID) {
-		quotes.remove(ID);
-		return false;
+	public String get(final String user) {
+		return greets.get(user.toLowerCase());
 	}
 
 	/**
-	 * Returns a random quote.
+	 * Checks whether the user has a greet set.
 	 */
-	public UserQuote get() {
-		return get(randomNumberGenerator.nextInt(quotes.size()));
+	public boolean isSet(final String user) {
+		return greets.containsKey(user);
 	}
-
-	/**
-	 * Returns the quote with the specific ID.
-	 */
-	public UserQuote get(final int ID) {
-		if (ID >= 0 && ID < quotes.size()) {
-			return quotes.get(ID);
-		} else {
-			return null;
-		}
-	}
-
 
 }
