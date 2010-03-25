@@ -36,6 +36,8 @@ public class SeriousIRCBot extends PircBot {
 	private static final String QUERY_QUOTE_ADD = "dodaj";
 	private static final String QUERY_QUOTE_DEL = "obriši";
 
+	private static final String QUERY_MATH = "m";
+
 	private static final String MESSAGE_FATAL_ERROR = "FATAL ERROR";
 	private static final String MESSAGE_INVALID_COMMAND = "nije mi poznata ta naredba. Probaj ?" + QUERY_HELP + ".";
 	private static final String MESSAGE_PARAMETER_INVALID = "Greška: nevaljani parametar:";
@@ -59,6 +61,8 @@ public class SeriousIRCBot extends PircBot {
 	private static final String MESSAGE_QUOTE_NOT_DELETED = "citat nije obrisan jer nisi dodao taj citat.";
 
 	private static final String MESSAGE_QUOTE_DOES_NOT_EXIST = "ne postoji";
+
+	private static final String MESSAGE_COMMAND_PARAMETERS_REQUIRED = "naredba zahtijeva barem jedan parametar";
 	
 
 	/**
@@ -94,10 +98,28 @@ public class SeriousIRCBot extends PircBot {
 			handleGreet(channel, sender, parameters);
 		} else if (command.equals(QUERY_QUOTE)) {
 			handleQuote(channel, sender, parameters);
+		} else if (command.equals(QUERY_MATH)) {
+			handleMath(channel, sender, parameters);
 		} else {
 			if (command.length() > 0) {
 				sendNotice(sender, sender + ", " + MESSAGE_INVALID_COMMAND);
 			}
+		}
+	}
+
+	private void handleMath(final String channel, final String sender, final String parameters) {
+		if (parameters.length() == 0) {
+			sendNotice(sender, sender + ", " + MESSAGE_COMMAND_PARAMETERS_REQUIRED + ".");
+		}
+		String[] params = parameters.split(" ", 2);
+		String command = params[0];
+
+		if (command.equals("pi")) {
+			sendMessage(channel, "pi = " + "3.1415926535897932384626433832795028841971693993751058209749 ...");
+		} else if (command.equals("e")) {
+			sendMessage(channel, "e = " + "2.718281828459045235360287471352662497757247093699959574966 ...");
+		} else {
+			sendNotice(sender, MESSAGE_PARAMETER_INVALID + " [" + command + "]!");
 		}
 	}
 
@@ -135,7 +157,7 @@ public class SeriousIRCBot extends PircBot {
 			try {
 				ID = Integer.parseInt(command);
 			} catch (NumberFormatException nfe) {
-				sendMessage(sender, MESSAGE_PARAMETER_INVALID + " [" + command + "]!");
+				sendNotice(sender, MESSAGE_PARAMETER_INVALID + " [" + command + "]!");
 				return;
 			}
 			UserQuote quote = userQuotes.get(ID - 1);
@@ -162,7 +184,7 @@ public class SeriousIRCBot extends PircBot {
 
 		if (topic.length() == 0) {
 			sendNotice(sender, "FRISC v" + BOT_VERSION + ". Naredbe počinju sa upitnikom (?). Popis naredbi: ");
-			sendNotice(sender, "-> " + QUERY_HELP + ", " + QUERY_VERSION + ", " + QUERY_GREET + ", " + QUERY_QUOTE + ".");
+			sendNotice(sender, "-> " + QUERY_HELP + ", " + QUERY_VERSION + ", " + QUERY_GREET + ", " + QUERY_QUOTE + ", " + QUERY_MATH + ".");
 		} else {
 			if (topic.equals(QUERY_HELP)) {
 				sendNotice(sender, "[" + topic +
@@ -178,9 +200,12 @@ public class SeriousIRCBot extends PircBot {
 						"[" +
 								topic +
 								"]: Ispišite citat s određenim ID brojem tako da broj upišete kao parametar naredbe. Ispišite slučajni citat tako da pozovete naredbu bez parametara.");
-			// } else if (topic.equals(QUERY_)) {
-			// sendMessage(channel, "[" + topic + "]:");
+			} else if (topic.equals(QUERY_MATH)) {
+				sendMessage(sender, "[" + topic + "]: Matematičke funkcije. Naredba zahtijeva barem jedan parametar.");
 			}
+			// } else if (topic.equals(QUERY_)) {
+			// sendMessage(sender, "[" + topic + "]:");
+
 		}
 	}
 
