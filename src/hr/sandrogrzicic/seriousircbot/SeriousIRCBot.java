@@ -1,6 +1,7 @@
 package hr.sandrogrzicic.seriousircbot;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -17,14 +18,19 @@ import org.jibble.pircbot.User;
 public class SeriousIRCBot extends PircBot {
 
 	/** The version of our bot. */
-	public static final String BOT_VERSION = "b8";
+	public static final String BOT_VERSION = "b9";
 
 	private static final Random randomNumberGenerator = new Random();
 	private final String directory;
 
 	private final UserGreets userGreets = new UserGreets();
 	private final UserQuotes userQuotes = new UserQuotes();
-	
+	private final UserKarma userKarma = new UserKarma();
+
+	// TRIGGERs should be sorted in ascending order.
+	private static final char[] TRIGGER_COMMAND = new char[] { '?' };
+	private static final char[] TRIGGER_KARMA = new char[] { '~', '*' };
+
 	private static final Object QUERY_VERSION = "verzija";
 	private static final String QUERY_HELP = "pomoć";
 
@@ -37,6 +43,8 @@ public class SeriousIRCBot extends PircBot {
 	private static final String QUERY_QUOTE_DEL = "obriši";
 
 	private static final String QUERY_MATH = "m";
+
+	private static final Object QUERY_KARMA = "karma";
 
 	private static final String MESSAGE_FATAL_ERROR = "FATAL ERROR";
 	private static final String MESSAGE_INVALID_COMMAND = "nije mi poznata ta naredba. Probaj ?" + QUERY_HELP + ".";
@@ -63,14 +71,28 @@ public class SeriousIRCBot extends PircBot {
 	private static final String MESSAGE_QUOTE_DOES_NOT_EXIST = "ne postoji";
 
 	private static final String MESSAGE_COMMAND_PARAMETERS_REQUIRED = "naredba zahtijeva barem jedan parametar";
-	
+
+	private static final String MESSAGE_KARMA_USER_NOT_FOUND = "Korisnik ne postoji!";
+	private static final String MESSAGE_KARMA_TYPE_NOT_RECOGNIZED = "Nevaljani modifikator karme. Valjani modifikatori: [++], [--].";
+
+	private static final String MESSAGE_NOW_HAS = "sada ima";
+	private static final String MESSAGE_HAS = "ima";
+	private static final String MESSAGE_KARMA = "karme";
+
+	private static final String MESSAGE_KARMA_CHANGE_NOT_ALLOWED = "Moraš pričekati neko vrijeme dok ne budeš smio mijenjati karmu korisnika";
+
+	// in seconds
+	private static final long KARMA_CHANGE_INTERVAL = 60 * 60;
 
 	/**
 	 * Creates a new bot with default parameters.
 	 */
 	public SeriousIRCBot(final String name, final String directory) {
+		Arrays.sort(TRIGGER_KARMA);
+
 		this.setName(name);
 		this.directory = directory;
+
 
 		if (!(new File(directory).isDirectory())) {
 			exitWithError("Invalid directory!", 1);
@@ -78,11 +100,16 @@ public class SeriousIRCBot extends PircBot {
 
 		userGreets.load(directory);
 		userQuotes.load(directory);
+		userKarma.load(directory);
 	}
 
 	@Override
 	protected void onMessage(final String channel, final String sender, final String login, final String hostname, final String message) {
-		if (!message.startsWith("?")) {
+		if ((Arrays.binarySearch(TRIGGER_KARMA, message.charAt(0)) >= 0) && message.length() > 1) {
+			handleKarma(channel, sender, message.substring(1));
+		}
+
+		if (Arrays.binarySearch(TRIGGER_COMMAND, message.charAt(0)) < 0) {
 			return;
 		}
 
@@ -105,6 +132,59 @@ public class SeriousIRCBot extends PircBot {
 				sendNotice(sender, sender + ", " + MESSAGE_INVALID_COMMAND);
 			}
 		}
+	}
+
+	private void handleKarma(final String channel, final String sender, final String parameter) {
+		if (!(parameter.endsWith("++") || parameter.endsWith("--"))) {
+			String nickLC = parameter.toLowerCase();
+			if (userKarma.contains(nickLC)) {
+				// display the user's karma amount
+				sendMessage(channel, sender + ", [" + parameter + "] " + MESSAGE_HAS + " [" + userKarma.get(nickLC) + "] " + MESSAGE_KARMA + ".");
+			} else {
+				sendNotice(sender, MESSAGE_KARMA_USER_NOT_FOUND);
+			}
+			return;
+		}
+
+		// change user karma
+		if (parameter.length() < 3) {
+			sendNotice(sender, MESSAGE_PARAMETER_INVALID + " [" + parameter + "]!");
+			return;
+		}
+
+		String nick = parameter.substring(0, parameter.length() - 2);
+		String nickLC = nick.toLowerCase();
+		String karmaType = parameter.substring(parameter.length() - 2, parameter.length());
+
+		// check whether user is allowed to change the target's karma
+		if ((System.currentTimeMillis() / 1000 - userKarma.getUpdateTime(sender, nick)) < KARMA_CHANGE_INTERVAL) {
+			sendNotice(sender, MESSAGE_KARMA_CHANGE_NOT_ALLOWED + " [" + nick + "].");
+			return;
+		}
+
+		boolean found = false;
+		for (User user : getUsers(channel)) {
+			if (nickLC.equals(user.getNick().toLowerCase())) {
+				found = true;
+			}
+		}
+
+		if (!found) {
+			sendNotice(sender, MESSAGE_KARMA_USER_NOT_FOUND);
+			return;
+		}
+
+		if (karmaType.equals("--") || sender.toLowerCase().equals(nickLC)) {
+			userKarma.decrementKarma(nickLC);
+		} else if (karmaType.equals("++")) {
+			userKarma.incrementKarma(nickLC);
+		} else {
+			sendNotice(sender, MESSAGE_KARMA_TYPE_NOT_RECOGNIZED);
+			return;
+		}
+		userKarma.changed(sender, nick);
+		userKarma.save(directory);
+		sendMessage(channel, sender + ", [" + nick + "] " + MESSAGE_NOW_HAS + " [" + userKarma.get(nick) + "] " + MESSAGE_KARMA + ".");
 	}
 
 	private void handleMath(final String channel, final String sender, final String parameters) {
@@ -201,11 +281,16 @@ public class SeriousIRCBot extends PircBot {
 								topic +
 								"]: Ispišite citat s određenim ID brojem tako da broj upišete kao parametar naredbe. Ispišite slučajni citat tako da pozovete naredbu bez parametara.");
 			} else if (topic.equals(QUERY_MATH)) {
-				sendMessage(sender, "[" + topic + "]: Matematičke funkcije. Naredba zahtijeva barem jedan parametar.");
-			}
+				sendNotice(sender, "[" + topic + "]: Matematičke funkcije. Naredba zahtijeva barem jedan parametar.");
+			} else if (topic.equals(QUERY_KARMA)) {
+				sendNotice(
+						sender,
+						"[" +
+								topic +
+								"]: Karma sustav. Za razliku od ostalih naredbi, prefiks je ~ nakon čega odmah slijedi nick osobe kojoj želite podići (++) ili smanjiti (--) karmu. Primjer: ~vedran_lanc++");
 			// } else if (topic.equals(QUERY_)) {
-			// sendMessage(sender, "[" + topic + "]:");
-
+				// sendNotice(sender, "[" + topic + "]:");
+			}
 		}
 	}
 
@@ -248,7 +333,7 @@ public class SeriousIRCBot extends PircBot {
 
 	@Override
 	protected void onPrivateMessage(final String sender, final String login, final String hostname, final String message) {
-		if (message.equals("quit")) {
+		if (message.equals("sd")) {
 			List<String> quitMessages = new ArrayList<String>();
 			quitMessages.add("Worm me zgasio!");
 			quitMessages.add("Worm me ubio!");
@@ -271,6 +356,15 @@ public class SeriousIRCBot extends PircBot {
 	}
 
 	@Override
+	protected void onNickChange(final String oldNick, final String login, final String hostname, final String newNick) {
+		String oldNickLC = oldNick.toLowerCase();
+		String newNickLC = newNick.toLowerCase();
+		if ((oldNickLC.endsWith("afk") && !newNickLC.endsWith("afk")) || (oldNickLC.endsWith("bnc") && !newNickLC.endsWith("bnc"))) {
+			onJoin("#fer2", newNickLC, login, hostname);
+		}
+	}
+
+	@Override
 	protected void onAction(final String sender, final String login, final String hostname, final String target, final String action) {
 		// TODO Auto-generated method stub
 		super.onAction(sender, login, hostname, target, action);
@@ -280,6 +374,22 @@ public class SeriousIRCBot extends PircBot {
 	protected void onChannelInfo(final String channel, final int userCount, final String topic) {
 		// TODO Auto-generated method stub
 		super.onChannelInfo(channel, userCount, topic);
+	}
+
+	@Override
+	protected void onInvite(final String targetNick, final String sourceNick, final String sourceLogin, final String sourceHostname,
+			final String channel) {
+		if (sourceNick.equals("SeriousWorm")) {
+			joinChannel(channel);
+		}
+	}
+
+	@Override
+	protected void onKick(final String channel, final String kickerNick, final String kickerLogin, final String kickerHostname,
+			final String recipientNick, final String reason) {
+		if (recipientNick.equals(getNick())) {
+			joinChannel(channel);
+		}
 	}
 
 	@Override
@@ -349,21 +459,6 @@ public class SeriousIRCBot extends PircBot {
 		super.onIncomingFileTransfer(transfer);
 	}
 
-	@Override
-	protected void onInvite(final String targetNick, final String sourceNick, final String sourceLogin, final String sourceHostname,
-			final String channel) {
-		if (sourceNick.equals("SeriousWorm")) {
-			joinChannel(channel);
-		}
-	}
-
-	@Override
-	protected void onKick(final String channel, final String kickerNick, final String kickerLogin, final String kickerHostname,
-			final String recipientNick, final String reason) {
-		if (recipientNick.equals(getNick())) {
-			joinChannel(channel);
-		}
-	}
 
 	@Override
 	protected void onMode(final String channel, final String sourceNick, final String sourceLogin, final String sourceHostname, final String mode) {
@@ -371,14 +466,6 @@ public class SeriousIRCBot extends PircBot {
 		super.onMode(channel, sourceNick, sourceLogin, sourceHostname, mode);
 	}
 
-	@Override
-	protected void onNickChange(final String oldNick, final String login, final String hostname, final String newNick) {
-		String oldNickLC = oldNick.toLowerCase();
-		String newNickLC = newNick.toLowerCase();
-		if ((oldNickLC.endsWith("afk") && !newNickLC.endsWith("afk")) || (oldNickLC.endsWith("bnc") && !newNickLC.endsWith("bnc"))) {
-			onJoin("#fer2", newNick, login, hostname);
-		}
-	}
 
 	@Override
 	protected void onNotice(final String sourceNick, final String sourceLogin, final String sourceHostname, final String target, final String notice) {

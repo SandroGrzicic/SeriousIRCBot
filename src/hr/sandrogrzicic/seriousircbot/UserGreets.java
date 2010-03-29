@@ -105,14 +105,19 @@ public class UserGreets {
 	 * @return the greet message.
 	 */
 	public String get(final String user) {
-		return greets.get(user.toLowerCase());
+		String userLC = user.toLowerCase();
+		if (greets.containsKey(userLC)) {
+			return greets.get(userLC);
+		} else {
+			return "";
+		}
 	}
 
 	/**
 	 * Checks whether the user has a greet set.
 	 */
 	public boolean isSet(final String user) {
-		return greets.containsKey(user);
+		return greets.containsKey(user.toLowerCase());
 	}
 
 }
