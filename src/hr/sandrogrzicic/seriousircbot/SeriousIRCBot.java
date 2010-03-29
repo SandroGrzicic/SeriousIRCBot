@@ -333,7 +333,7 @@ public class SeriousIRCBot extends PircBot {
 
 	@Override
 	protected void onPrivateMessage(final String sender, final String login, final String hostname, final String message) {
-		if (message.equals("sd")) {
+		if (message.equals("quit")) {
 			List<String> quitMessages = new ArrayList<String>();
 			quitMessages.add("Worm me zgasio!");
 			quitMessages.add("Worm me ubio!");
