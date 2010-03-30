@@ -20,7 +20,7 @@ public class Main {
 		// SeriousIRCBot bot = new SeriousIRCBot("FRISCtest", dir);
 		SeriousIRCBot bot = new SeriousIRCBot("FRISC", dir);
 
-// bot.setVerbose(true);
+		bot.setVerbose(true);
 		bot.connect("irc.freenode.net");
 		// bot.joinChannel("#fer2test");
 		bot.joinChannel("#fer2");

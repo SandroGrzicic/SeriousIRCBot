@@ -18,7 +18,7 @@ import org.jibble.pircbot.User;
 public class SeriousIRCBot extends PircBot {
 
 	/** The version of our bot. */
-	public static final String BOT_VERSION = "b9";
+	public static final String BOT_VERSION = "b10";
 
 	private static final Random randomNumberGenerator = new Random();
 	private final String directory;
@@ -92,7 +92,6 @@ public class SeriousIRCBot extends PircBot {
 
 		this.setName(name);
 		this.directory = directory;
-
 
 		if (!(new File(directory).isDirectory())) {
 			exitWithError("Invalid directory!", 1);
@@ -207,14 +206,7 @@ public class SeriousIRCBot extends PircBot {
 	private void handleQuote(final String channel, final String sender, final String parameters) {
 		String[] params = parameters.split(" ", 2);
 		String command = params[0];
-		if (command.equals(QUERY_QUOTE_ADD)) {
-			if (params.length == 1) {
-				sendNotice(sender, sender + ", " + MESSAGE_COMMAND_PARAMETERS_NUMBER + " [2] " + MESSAGE_PARAMETERS);
-			} else {
-				sendNotice(sender, sender + ", " + MESSAGE_QUOTE_ADDED + "[" + userQuotes.add(sender, params[1]) + "].");
-				userQuotes.save(directory);
-			}
-		} else if (command.equals(QUERY_QUOTE_DEL)) {
+		if (command.equals(QUERY_QUOTE_DEL)) {
 			if (params.length == 1) {
 				sendNotice(sender, sender + ", " + MESSAGE_COMMAND_PARAMETERS_NUMBER + " [2] " + MESSAGE_PARAMETERS);
 			} else {
@@ -227,6 +219,7 @@ public class SeriousIRCBot extends PircBot {
 				}
 				if (sender.equals(userQuotes.get(ID).getUser())) {
 					userQuotes.remove(ID);
+					userQuotes.save(directory);
 					sendNotice(sender, sender + ", " + MESSAGE_QUOTE_DELETED + ".");
 				} else {
 					sendNotice(sender, sender + ", " + MESSAGE_QUOTE_NOT_DELETED + ".");
@@ -235,12 +228,16 @@ public class SeriousIRCBot extends PircBot {
 		} else if (command.length() > 0) {
 			int ID;
 			try {
+				// check whether this is an attempt to add a quote or display the specified quote
 				ID = Integer.parseInt(command);
 			} catch (NumberFormatException nfe) {
-				sendNotice(sender, MESSAGE_PARAMETER_INVALID + " [" + command + "]!");
+				// add the quote
+				sendNotice(sender, sender + ", " + MESSAGE_QUOTE_ADDED + "[" + (userQuotes.add(sender, params[1]) - 1) + "].");
+				userQuotes.save(directory);
 				return;
 			}
-			UserQuote quote = userQuotes.get(ID - 1);
+			// display the specified quote
+			UserQuote quote = userQuotes.get(ID);
 			if (quote != null) {
 				sendMessage(channel, MESSAGE_QUOTE + " #[" + ID + "]: [" + quote.getUser() + "] " + quote.get());
 			} else {

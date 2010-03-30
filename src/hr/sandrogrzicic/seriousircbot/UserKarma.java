@@ -93,7 +93,7 @@ public class UserKarma {
 	}
 
 	/**
-	 * Saves the user greets to the specified directory.
+	 * Saves the user karma to the specified directory.
 	 * 
 	 * @param directory
 	 * @return whether the save has been successful.

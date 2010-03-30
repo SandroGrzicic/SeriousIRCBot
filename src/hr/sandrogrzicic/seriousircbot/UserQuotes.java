@@ -106,7 +106,7 @@ public class UserQuotes {
 	 */
 	public boolean remove(final int ID) {
 		quotes.remove(ID);
-		return false;
+		return true;
 	}
 
 	/**
